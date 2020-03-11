@@ -26,6 +26,10 @@ public class Client {
     final String command = args[0];
     final int n = Integer.parseInt(args[1]);
     final Path jarPath = new Path(args[2]);
+    boolean useAsync = false;
+    if (args.length > 3) {
+      useAsync = Boolean.parseBoolean(args[3]);
+    }
 
     // Create yarnClient
     YarnClient yarnClient = YarnClient.createYarnClient();
@@ -40,7 +44,7 @@ public class Client {
     List<String> list = new ArrayList<>();
     list.add("$JAVA_HOME/bin/java");
     list.add("-Xmx256M");
-    list.add("com.hortonworks.simpleyarnapp.ApplicationMaster");
+    list.add(useAsync ? "com.hortonworks.simpleyarnapp.ApplicationMasterAsync" : "com.hortonworks.simpleyarnapp.ApplicationMaster");
     list.add(command);
     list.add(String.valueOf(n));
     list.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout");

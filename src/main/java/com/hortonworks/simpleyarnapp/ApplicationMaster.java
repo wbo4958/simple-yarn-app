@@ -1,6 +1,7 @@
 package com.hortonworks.simpleyarnapp;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -22,7 +23,7 @@ public class ApplicationMaster {
   public static void main(String[] args) throws Exception {
 
     final String command = args[0];
-    final int n = Integer.valueOf(args[1]);
+    final int n = Integer.parseInt(args[1]);
     
     // Initialize clients to ResourceManager and NodeManagers
     Configuration conf = new YarnConfiguration();
@@ -46,13 +47,13 @@ public class ApplicationMaster {
 
     // Resource requirements for worker containers
     Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(128);
+    capability.setMemorySize(128);
     capability.setVirtualCores(1);
 
     // Make container requests to ResourceManager
     for (int i = 0; i < n; ++i) {
       ContainerRequest containerAsk = new ContainerRequest(capability, null, null, priority);
-      System.out.println("Making res-req " + i);
+      System.out.println("Making ContainerRequest " + i);
       rmClient.addContainerRequest(containerAsk);
     }
 
@@ -63,14 +64,13 @@ public class ApplicationMaster {
         AllocateResponse response = rmClient.allocate(responseId++);
         for (Container container : response.getAllocatedContainers()) {
             // Launch container by create ContainerLaunchContext
-            ContainerLaunchContext ctx =
-                    Records.newRecord(ContainerLaunchContext.class);
-            ctx.setCommands(
-                    Collections.singletonList(
-                            command +
-                                    " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
-                                    " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
-                    ));
+            ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
+            List<String> list = new ArrayList<>();
+            list.add(command);
+            list.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout");
+            list.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+            ctx.setCommands(list);
+
             System.out.println("Launching container " + container.getId());
             nmClient.startContainer(container, ctx);
         }
@@ -82,7 +82,6 @@ public class ApplicationMaster {
     }
 
     // Un-register with ResourceManager
-    rmClient.unregisterApplicationMaster(
-        FinalApplicationStatus.SUCCEEDED, "", "");
+    rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, "", "");
   }
 }

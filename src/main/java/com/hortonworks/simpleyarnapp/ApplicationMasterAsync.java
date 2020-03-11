@@ -1,7 +1,8 @@
 package com.hortonworks.simpleyarnapp;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -20,12 +21,14 @@ public class ApplicationMasterAsync extends AMRMClientAsync.AbstractCallbackHand
     private final Configuration configuration;
     private final NMClient nmClient;
     private final String command;
-    int numContainersToWaitFor;
+    private final int numContainersToWaitFor;
+    private final CountDownLatch completedLatch;
 
     public ApplicationMasterAsync(String command, int numContainersToWaitFor) {
         this.command = command;
         configuration = new YarnConfiguration();
         this.numContainersToWaitFor = numContainersToWaitFor;
+        completedLatch = new CountDownLatch(numContainersToWaitFor);
         nmClient = NMClient.createNMClient();
         nmClient.init(configuration);
         nmClient.start();
@@ -36,12 +39,11 @@ public class ApplicationMasterAsync extends AMRMClientAsync.AbstractCallbackHand
             try {
                 // Launch container by create ContainerLaunchContext
                 ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
-                ctx.setCommands(
-                        Collections.singletonList(
-                                command +
-                                        " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
-                                        " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
-                        ));
+                List<String> list = new ArrayList<>();
+                list.add(command);
+                list.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout");
+                list.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+                ctx.setCommands(list);
                 System.out.println("[AM] Launching container " + container.getId());
                 nmClient.startContainer(container, ctx);
             } catch (Exception ex) {
@@ -57,9 +59,7 @@ public class ApplicationMasterAsync extends AMRMClientAsync.AbstractCallbackHand
     public void onContainersCompleted(List<ContainerStatus> statuses) {
         for (ContainerStatus status : statuses) {
             System.out.println("[AM] Completed container " + status.getContainerId());
-            synchronized (this) {
-                numContainersToWaitFor--;
-            }
+            completedLatch.countDown();
         }
     }
 
@@ -74,10 +74,6 @@ public class ApplicationMasterAsync extends AMRMClientAsync.AbstractCallbackHand
 
     public float getProgress() {
         return 0;
-    }
-
-    public boolean doneWithContainers() {
-        return numContainersToWaitFor == 0;
     }
 
     public Configuration getConfiguration() {
@@ -110,25 +106,22 @@ public class ApplicationMasterAsync extends AMRMClientAsync.AbstractCallbackHand
 
         // Resource requirements for worker containers
         Resource capability = Records.newRecord(Resource.class);
-        capability.setMemory(128);
+        capability.setMemorySize(128);
         capability.setVirtualCores(1);
 
         // Make container requests to ResourceManager
         for (int i = 0; i < numContainersToWaitFor; ++i) {
             ContainerRequest containerAsk = new ContainerRequest(capability, null, null, priority);
-            System.out.println("[AM] Making res-req " + i);
+            System.out.println("[AM] Making ContainerRequest " + i);
             rmClient.addContainerRequest(containerAsk);
         }
 
         System.out.println("[AM] waiting for containers to finish");
-        while (!doneWithContainers()) {
-            Thread.sleep(100);
-        }
+        completedLatch.await();
 
         System.out.println("[AM] unregisterApplicationMaster 0");
         // Un-register with ResourceManager
-        rmClient.unregisterApplicationMaster(
-                FinalApplicationStatus.SUCCEEDED, "", "");
+        rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, "", "");
         System.out.println("[AM] unregisterApplicationMaster 1");
     }
 }

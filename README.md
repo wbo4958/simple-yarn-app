@@ -10,17 +10,18 @@ $ mvn clean package
 Usage:
 ======
 
-$ cd target
 $ export SIMPLE_APP_JAR=simple-yarn-app-1.1.0.jar
 
 ### Unmanaged mode
-$ yarn jar $HADOOP_YARN_HOME/share/hadoop/yarn/hadoop-yarn-applications-unmanaged-am-launcher-2.1.1-SNAPSHOT.jar Client -classpath $SIMPLE_APP_JAR -cmd "java com.hortonworks.simpleyarnapp.ApplicationMaster /bin/date 2"
+$ yarn jar $HADOOP_YARN_HOME/share/hadoop/yarn/hadoop-yarn-applications-unmanaged-am-launcher-2.1.1-SNAPSHOT.jar Client -classpath target/$SIMPLE_APP_JAR -cmd "java com.hortonworks.simpleyarnapp.ApplicationMaster /bin/date 2"
+
+* If you want to use ApplicationMasterAsync, then use it instead of ApplicationMaster. 
 
 ### Managed mode
 $ hadoop fs -mkdir -p /apps/simple/
-$ hadoop fs -copyFromLocal $SIMPLE_APP_JAR /apps/simple/$SIMPLE_APP_JAR
-$ yarn jar $SIMPLE_APP_JAR com.hortonworks.simpleyarnapp.Client /bin/date 2 /apps/simple/$SIMPLE_APP_JAR
+$ hadoop fs -copyFromLocal -f $SIMPLE_APP_JAR /apps/simple/$SIMPLE_APP_JAR
+$ yarn jar target/$SIMPLE_APP_JAR com.hortonworks.simpleyarnapp.Client /bin/date 2 /apps/simple/$SIMPLE_APP_JAR
 
 ### With JDWP
-$ HADOOP_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5432"; yarn ...
+$ HADOOP_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5432" yarn ...
     
