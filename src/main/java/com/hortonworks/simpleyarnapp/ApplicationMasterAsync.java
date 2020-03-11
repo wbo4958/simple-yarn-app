@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
@@ -17,10 +16,10 @@ import org.apache.hadoop.yarn.util.Records;
  * This class implements a simple async app master.
  * In real usages, the callbacks should execute in a separate thread or thread pool
  */
-public class ApplicationMasterAsync implements AMRMClientAsync.CallbackHandler {
-    Configuration configuration;
-    NMClient nmClient;
-    String command;
+public class ApplicationMasterAsync extends AMRMClientAsync.AbstractCallbackHandler {
+    private final Configuration configuration;
+    private final NMClient nmClient;
+    private final String command;
     int numContainersToWaitFor;
 
     public ApplicationMasterAsync(String command, int numContainersToWaitFor) {
@@ -36,8 +35,7 @@ public class ApplicationMasterAsync implements AMRMClientAsync.CallbackHandler {
         for (Container container : containers) {
             try {
                 // Launch container by create ContainerLaunchContext
-                ContainerLaunchContext ctx =
-                        Records.newRecord(ContainerLaunchContext.class);
+                ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
                 ctx.setCommands(
                         Collections.singletonList(
                                 command +
@@ -52,6 +50,10 @@ public class ApplicationMasterAsync implements AMRMClientAsync.CallbackHandler {
         }
     }
 
+    @Override
+    public void onContainersUpdated(List<UpdatedContainer> containers) {
+    }
+
     public void onContainersCompleted(List<ContainerStatus> statuses) {
         for (ContainerStatus status : statuses) {
             System.out.println("[AM] Completed container " + status.getContainerId());
@@ -62,9 +64,6 @@ public class ApplicationMasterAsync implements AMRMClientAsync.CallbackHandler {
     }
 
     public void onNodesUpdated(List<NodeReport> updated) {
-    }
-
-    public void onReboot() {
     }
 
     public void onShutdownRequest() {
@@ -87,7 +86,7 @@ public class ApplicationMasterAsync implements AMRMClientAsync.CallbackHandler {
 
     public static void main(String[] args) throws Exception {
         final String command = args[0];
-        final int n = Integer.valueOf(args[1]);
+        final int n = Integer.parseInt(args[1]);
 
         ApplicationMasterAsync master = new ApplicationMasterAsync(command, n);
         master.runMainLoop();
