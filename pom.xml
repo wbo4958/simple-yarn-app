@@ -6,8 +6,13 @@
   <version>1.1.0</version>
   <name>simple-yarn-app</name>
 
-  <url>https://github.com/hortonworks/simple-yarn-app</url>
- 
+  <url>https://github.com/EugeneChung/simple-yarn-app</url>
+
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
