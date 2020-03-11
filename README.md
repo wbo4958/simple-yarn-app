@@ -20,5 +20,7 @@ $ yarn jar $HADOOP_YARN_HOME/share/hadoop/yarn/hadoop-yarn-applications-unmanage
 $ hadoop fs -mkdir -p /apps/simple/
 $ hadoop fs -copyFromLocal $SIMPLE_APP_JAR /apps/simple/$SIMPLE_APP_JAR
 $ yarn jar $SIMPLE_APP_JAR com.hortonworks.simpleyarnapp.Client /bin/date 2 /apps/simple/$SIMPLE_APP_JAR
-  
+
+### With JDWP
+$ HADOOP_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5432"; yarn ...
     
