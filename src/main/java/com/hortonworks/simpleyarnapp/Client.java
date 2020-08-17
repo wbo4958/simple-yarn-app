@@ -23,6 +23,7 @@ public class Client {
   private final Configuration conf = new YarnConfiguration();
   
   public void run(String[] args) throws Exception {
+    //用于接受的 command /bin/date
     final String command = args[0];
     final int n = Integer.parseInt(args[1]);
     final Path jarPath = new Path(args[2]);
